@@ -1,29 +1,9 @@
 import json
-import os
-import sys
-
 import pandas as pd
-from django.core.wsgi import get_wsgi_application
 
 from magine.enrichment.enrichr import Enrichr, db_types
 from magine.html_templates.html_tools import create_yadf_filters, \
     _format_simple_table
-from gui.tasks import run
-
-
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'magine_gui_app.settings')
-
-sys.path.append(
-    os.path.dirname(
-        os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    )
-)
-
-get_wsgi_application()
-
-from gui.models import Data, EnrichmentOutput
-
-e = Enrichr()
 
 
 cols = ['term_name', 'combined_score', 'adj_p_value', 'rank',  'genes',
@@ -51,6 +31,7 @@ def model_to_json(model):
 def return_table(list_of_genes, ont='pathways'):
     cols = ['term_name', 'combined_score', 'adj_p_value', 'rank',
             'genes', 'n_genes', 'db']
+    e = Enrichr()
     df = e.run(list_of_genes, gene_set_lib=db_types[ont])[cols]
     tmp_table = _format_simple_table(df)
     tmp_table['genes'] = tmp_table['genes'].str.split(',').str.join(', ')
@@ -99,7 +80,8 @@ def _add_check(row):
 
 
 def add_enrichment(project_name, reset_data=True):
-
+    from gui.models import Data, EnrichmentOutput
+    from gui.tasks import run
     if reset_data:
         EnrichmentOutput.objects.filter(project_name=project_name).delete()
 

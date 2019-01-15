@@ -9,7 +9,7 @@ from magine_gui_app.settings import BASE_DIR
 _dir = BASE_DIR
 # Create your tests here.
 from gui.models import GeneList, Gene, Project, EnrichmentOutput
-from gui.enrichment_functions.enrichr_helper import run_enrichment
+from gui.enrichr_helper import run_enrichment
 
 
 

@@ -4,9 +4,9 @@ from django.template.loader import get_template
 from django.views import View
 
 import gui.forms.enrichment as forms
-import gui.enrichment_functions.enrichr_helper  as enrichr_help
+import gui.enrichr_helper as enrichr_help
 
-from.common import check_species_list
+from gui.views.common import check_species_list
 from gui.models import EnrichmentOutput
 
 
@@ -16,7 +16,7 @@ class EnrichmentResultsView(View):
         if form.is_valid():
             genes = form.cleaned_data['list_of_species'].split(',')
             list_of_species = check_species_list(genes)
-            ont = form.cleaned_data['enrichment']
+            ont = form.cleaned_data['ontology']
             data = enrichr_help.return_table(list_of_species, ont)
 
             template = get_template('simple_table_view.html', using='jinja2')

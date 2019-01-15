@@ -7,7 +7,7 @@ from django.views import View
 
 from gui.forms.project import ProjectForm
 from gui.data_functions.add_raptr_project import add_project_from_zip
-from gui.enrichment_functions.enrichr_helper import add_enrichment
+from gui.enrichr_helper import add_enrichment
 from gui.models import Data
 
 

@@ -1,17 +1,12 @@
 import django.forms.widgets as widg
 from django import forms
 import gui.models as models
+from magine.enrichment.enrichr import db_types
 
 
 class ListOfSpeciesOntology(forms.Form):
     list_of_species = forms.CharField(widget=widg.Textarea(), empty_value='')
-    CHOICES = (
-        ('transcription_factors', 'transcription_factors'),
-        ('pathways', 'pathways'),
-        ('kinases', 'kinases'),
-        ('drug', 'drug'),
-        ('ontologies', 'ontologies')
-    )
+    CHOICES = ((i, i) for i in db_types)
     ontology = forms.ChoiceField(choices=CHOICES)
 
     class Meta:

@@ -14,5 +14,5 @@ app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 app.control.broadcast(
     'rate_limit',
     arguments={'task_name': 'gui.enrichment_functions.tasks.run_set_of_dbs',
-               'rate_limit': '3/m'}
+               'rate_limit': '1/m'}
 )

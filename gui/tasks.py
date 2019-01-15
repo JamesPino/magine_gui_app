@@ -21,7 +21,7 @@ def run(samples, sample_ids, label, p_name, already_there):
         if current not in already_there:
             run_set_of_dbs.apply_async(
                 args=(list(genes), sample_id, standard_dbs, label, p_name),
-                countdown=10
+                countdown=30
             )
 
         print("Finished {}".format(sample_id))
