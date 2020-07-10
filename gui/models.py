@@ -5,7 +5,7 @@ from django.utils import timezone
 from picklefield.fields import PickledObjectField
 
 from gui.data_functions import get_all_tables
-from magine.data.experimental_data import ExperimentalData, load_data_csv
+from magine.data.experimental_data import ExperimentalData, load_data
 
 
 class Data(models.Model):
@@ -28,7 +28,7 @@ class Data(models.Model):
             exp_data = ExperimentalData(file)
             data = ExperimentalData(file).data
         else:
-            data = load_data_csv(file, low_memory=False)
+            data = load_data(file, low_memory=False)
 
         if set_time_point:
             data['time'] = data['sample_id']

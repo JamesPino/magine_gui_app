@@ -1,6 +1,7 @@
 @ECHO OFF
 setlocal
-set PYTHONPATH=C:\Users\james\PycharmProjects\Magine;%PYTHONPATH%
+CALL activate imagine_37
+set PYTHONPATH=C:\Users\pinojc\PycharmProjects\PycharmProjects\Magine;%PYTHONPATH%
 python manage.py runserver
 endlocal
 

@@ -3,7 +3,7 @@ import os
 import networkx as nx
 
 from gui.network_functions.networkx_tools import from_networkx
-from magine.html_templates.cy_stypes import styles
+from magine.networks.visualization.notebooks.cyjs_options import styles
 from magine.networks.exporters import nx_to_json
 from magine.networks.subgraphs import Subgraph
 
@@ -73,6 +73,8 @@ def _get_edge_types(graph):
 
 
 def prep_g(sg):
+    for i in sg.nodes:
+        sg.node[i]['color'] = 'white'
     data = nx_to_json(sg)
     data['edge_list'] = _get_edge_types(sg)
     data['style_json'] = styles['default']

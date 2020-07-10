@@ -1,9 +1,9 @@
 from magine.enrichment.enrichr import Enrichr, db_types
 from gui.models import EnrichmentOutput
-from magine_gui_app.celery import app
-from celery.utils.log import get_task_logger
+# from magine_gui_app.celery import app
+# from celery.utils.log import get_task_logger
 
-logger = get_task_logger(__name__)
+# logger = get_task_logger(__name__)
 
 
 def run(samples, sample_ids, label, p_name, already_there):
@@ -19,17 +19,20 @@ def run(samples, sample_ids, label, p_name, already_there):
         current = "{}_{}_{}".format(label, sample_id, p_name)
         print(standard_dbs)
         if current not in already_there:
-            run_set_of_dbs.apply_async(
-                args=(list(genes), sample_id, standard_dbs, label, p_name),
-                countdown=30
+            # run_set_of_dbs.apply_async(
+            #     args=(list(genes), sample_id, standard_dbs, label, p_name),
+            #     countdown=30
+            # )
+            run_set_of_dbs(
+               list(genes), sample_id, standard_dbs, label, p_name
             )
 
         print("Finished {}".format(sample_id))
 
 
-@app.task(name='gui.enrichment_functions.tasks.run_set_of_dbs')
+# @app.task(name='gui.enrichment_functions.tasks.run_set_of_dbs')
 def run_set_of_dbs(sample, sample_id, dbs, label, p_name):
-    logger.info("Running enrichment")
+    # logger.info("Running enrichment")
     e = Enrichr()
     df = e.run(sample, dbs)
     if df.shape[0] == 0:
@@ -46,4 +49,4 @@ def run_set_of_dbs(sample, sample_id, dbs, label, p_name):
     EnrichmentOutput.objects.bulk_create(
         [EnrichmentOutput(**r) for r in df.to_dict(orient='records')]
     )
-    logger.info("Done with enrichment for {} : {}".format(sample_id, dbs))
+    # logger.info("Done with enrichment for {} : {}".format(sample_id, dbs))
