@@ -21,16 +21,15 @@ class EnrichmentDatasetForm(forms.ModelForm):
         # select which projects to show
         c = models.EnrichmentOutput.objects.values_list(
             'project_name', 'project_name').distinct()
-
         self.fields['project_name'] = forms.MultipleChoiceField(
-            c, widget=widg.CheckboxSelectMultiple)
+            choices=c, widget=widg.CheckboxSelectMultiple)
         self.fields['project_name'].initial = c
 
         # select which dbs to show
         c = models.EnrichmentOutput.objects.values_list('db', 'db').distinct()
 
         self.fields['db'] = forms.MultipleChoiceField(
-            c, widget=widg.CheckboxSelectMultiple
+            choices=c, widget=widg.CheckboxSelectMultiple
         )
         self.fields['db'].initial = c
 
@@ -39,7 +38,7 @@ class EnrichmentDatasetForm(forms.ModelForm):
             'category', 'category').distinct()
 
         self.fields['category'] = forms.MultipleChoiceField(
-            c, widget=widg.CheckboxSelectMultiple
+            choices=c, widget=widg.CheckboxSelectMultiple
         )
         self.fields['category'].initial = c
         # self.fields['category'].widget = widg.CheckboxSelectMultiple

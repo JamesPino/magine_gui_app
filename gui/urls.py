@@ -4,6 +4,7 @@ import gui.views.network as net_views
 import gui.views.enrichment as enri_views
 
 network_urls = [
+    url(r'^expand$', net_views.neighbor_expand, name='expand'),
     url(r'^subgraph$', net_views.SubgraphView.as_view(), name='subgraph'),
     url(r'^path$', net_views.ShortestPathView.as_view(), name='path'),
     url(r'^neighbors$', net_views.NeighborsView.as_view(), name='neighbors'),

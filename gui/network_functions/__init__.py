@@ -41,6 +41,20 @@ def neighbors(node, up, down, max_dist=1):
     return prep_g(sg)
 
 
+def expand_neighbors(node, up, down, max_dist=1):
+
+    sg = subgraph_gen.expand_neighbors(
+        network=None,
+        nodes=node,
+        upstream=up,
+        downstream=down,
+        max_dist=max_dist
+    )
+    for i in sg.nodes:
+        sg.node[i]['color'] = 'white'
+    return nx_to_json(sg)
+
+
 def path_between(source, end, bi_dir):
     sg = subgraph_gen.paths_between_pair(source, end,
                                          single_path=False,

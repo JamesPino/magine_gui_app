@@ -4,7 +4,8 @@
         <meta charset=utf-8/>
         <title>Subgraphs</title>
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+        <link rel="stylesheet"
+              href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
 
 
         <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
@@ -42,26 +43,49 @@
 
 <div class="row">
     <div class="container-fluid">
-
+        <!-- layout buttons -->
         <div class="dropdown nav navbar-nav">
-            <button class="btn btn-primary dropdown-toggle" type="button" data-toggle="dropdown">Layout options<span
+            <button class="btn btn-primary dropdown-toggle" type="button"
+                    data-toggle="dropdown">Layout options<span
                     class="caret"></span>
             </button>
+
             <ul class="dropdown-menu">
-                <li><input type='button' id='HieButton' value='Hierarchical layout'></li>
-                <li><input type='button' id='DagreButton' value='Default layout'></li>
-                <li><input type='button' id='FlatButton' value='Compact layout (random)'></li>
+                <li><input type='button' id='HieButton'
+                           value='Hierarchical layout'></li>
+                <li><input type='button' id='DagreButton'
+                           value='Default layout'></li>
+                <li><input type='button' id='FlatButton'
+                           value='Compact layout (random)'></li>
             </ul>
         </div>
 
     </div>
+
+    <!-- filter edge panel -->
     <div id="tools" class="panel panel-primary">
         <div class="panel-heading">Filter edges</div>
         <div class="panel-body">
             <div class="panel-body">
                 {% for t in edge_list|sort %}
-                    <button id="filter_{{ t }}" class="btn btn-success">{{ t|title }}</button>
+                    <button id="filter_{{ t }}"
+                            class="btn btn-success">{{ t|title }}</button>
                 {% endfor %}
+            </div>
+
+        </div>
+    </div>
+
+    <div id="color_nodes" class="panel panel-primary">
+        <div class="panel-heading">Color nodes</div>
+        <div class="panel-body">
+            <div class="panel-body">
+                <button id="color_time"
+                        class="btn btn-success">Color</button>
+            </div>
+            <div class="panel-body">
+                <button id="expand_nodes"
+                        class="btn btn-success">Expand node neighbors</button>
             </div>
 
         </div>
@@ -82,96 +106,155 @@
     </div>
 </div>
 
+
+<form id="myForm" target="_blank" action="{{ url('expand') }}">
+    <input type="hidden" name="list_of_species" id="list_id" value="Subgraphs"/>
+</form>
+
 <script>
 
-    var cy = cytoscape({
-            container: document.getElementById("cy"),
-            wheelSensitivity:.25,
-            {% autoescape off %}
-            elements: {
-                nodes:{{nodes}},
-                edges:{{edges}}
-            }
-            {% endautoescape %}
+    let cy = cytoscape({
+        container: document.getElementById("cy"),
+        wheelSensitivity: .25,
+        {% autoescape off %}
+        elements: {
+            nodes:{{nodes}},
+            edges:{{edges}}
+        }
+        {% endautoescape %}
 
-        });
+    });
+    cy.layout(
+        {
+            name: 'dagre',
+            avoidOverlap: true,
+            rankSep: 15,
+            padding: 5,
+            fit: true
+        }).run();
+    cy.resize();
+    cy.fit();
+    cy.style().fromJson(
+        {% autoescape off %}
+        {{style_json}}
+        {% endautoescape %}
+    ).update();
+
+    let HieButton = document.getElementById('HieButton');
+    HieButton.addEventListener('click', function () {
+        cy.layout({name: 'breadthfirst', avoidOverlap: true}).run();
+
+    });
+
+    let DagreButton = document.getElementById('DagreButton');
+    DagreButton.addEventListener('click', function () {
         cy.layout(
             {
                 name: 'dagre',
                 avoidOverlap: true,
-                rankSep:15,
-                padding:5,
-                fit:true
-            }).run();
+                rankSep: 15,
+                padding: 5,
+                fit: true
+            }
+        ).run();
         cy.resize();
         cy.fit();
-        cy.style().fromJson(
-            {% autoescape off %}
-            {{style_json}}
-            {% endautoescape %}
-        ).update();
 
-        var HieButton = document.getElementById('HieButton');
-        HieButton.addEventListener('click', function () {
-            cy.layout({name: 'breadthfirst', avoidOverlap: true}).run();
+    });
+    let FlatButton = document.getElementById('FlatButton');
+    FlatButton.addEventListener('click', function () {
+        cy.layout(
+            {
+                name: 'cose-bilkent',
+                avoidOverlapPadding: 100,
+                animate: false,
+                avoidOverlap: true
+            }
+        ).run();
+        cy.resize();
+        cy.fit();
+    });
 
+    let ColorButton = document.getElementById('color_time');
+    ColorButton.addEventListener('click', function () {
+        cy.batch(function(){
+            cy.nodes()
+            .data('color', 'red')
+        ;
         });
-        var DagreButton = document.getElementById('DagreButton');
-        DagreButton.addEventListener('click', function () {
-            cy.layout(
+    });
+
+    let ExpandNodes = document.getElementById('expand_nodes');
+    ExpandNodes.addEventListener('click', function () {
+        $.ajax(
+            {
+                type:"GET",
+                url: "{{ url('expand') }}",
+                data:{
+                    list_of_species: getSelected()
+                },
+                success: function( data )
                 {
-                    name: 'dagre',
-                    avoidOverlap: true,
-                    rankSep:15,
-                    padding:5,
-                    fit:true
-                }
-            ).run();
-            cy.resize();
-                cy.fit();
+                    console.log("Success")
+                    let nodes = JSON.parse(data.nodes);
 
+                    for (let i = 0, len = nodes.length; i < len; ++i) {
+                        cy.add({
+                            group: 'nodes',
+                            data: nodes[i].data
+                        })
+                    }
+                    let edges = JSON.parse(data.edges);
+                    for (let i = 0, len = edges.length; i < len; ++i) {
+                        cy.add({
+                            group: 'edges',
+                            data: edges[i].data
+                        })
+                    }
+                    cy.resize();
+                    cy.fit();
+                },
+                error: function(data){
+                    $.each(data.errors, function(index, value) {
+                        alert(value);
+                    });
+                    console.log("failed")
+                }
+            })
+
+    });
+    function getSelected() {
+        let selected = [];
+        cy.$(':selected').jsons().forEach(function (obj) {
+            selected.push(obj.data.id);
         });
-        var FlatButton = document.getElementById('FlatButton');
-        FlatButton.addEventListener('click', function () {
-            cy.layout(
-                {
-                    name: 'cose-bilkent',
-                    avoidOverlapPadding: 100,
-                    animate: false,
-                    avoidOverlap: true
-                }
-            ).run();
+        return selected.join(',');
+
+    }
+    function createNewFilter(name, criteria) {
+        let obj = {};
+        obj.removed_nodes = false;
+        obj.eles = 'none';
+        obj.criteria = criteria;
+        obj.button = document.getElementById(name);
+        obj.button.addEventListener('click', function () {
+            $(this).toggleClass('myClass');
+            if (obj.eles === 'none') {
+                obj.eles = cy.$(obj.criteria).remove();
+                obj.removed_nodes = cy.$('node[[degree<1]]').remove();
+            } else {
+                obj.removed_nodes.restore();
+                obj.eles.restore();
+                obj.eles = 'none';
+            }
+            {#cy.layout({name: 'dagre', avoidOverlap: true}).run();#}
             cy.resize();
-                cy.fit();
+            cy.fit();
         });
-
-
-        function createNewFilter(name, criteria) {
-            var obj = {};
-            obj.removed_nodes = false;
-            obj.eles = 'none';
-            obj.criteria = criteria;
-            obj.button = document.getElementById(name);
-            obj.button.addEventListener('click', function () {
-                $(this).toggleClass('myClass');
-                if (obj.eles === 'none') {
-                    obj.eles = cy.$(obj.criteria).remove();
-                    obj.removed_nodes = cy.$('node[[degree<1]]').remove();
-                }
-                else {
-                    obj.removed_nodes.restore();
-                    obj.eles.restore();
-                    obj.eles = 'none';
-                }
-                {#cy.layout({name: 'dagre', avoidOverlap: true}).run();#}
-                cy.resize();
-                cy.fit();
-            });
-        }
-        {% for t in edge_list %}
-            createNewFilter("filter_{{ t }}" , 'edge[interactionType *= \'{{ t }}\']');
-        {% endfor %}
-
+    }
+    {% for t in edge_list %}
+        createNewFilter("filter_{{ t }}", 'edge[interactionType *= \'{{ t }}\']');
+    {% endfor %}
 
 
 </script>

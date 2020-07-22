@@ -2,11 +2,14 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.template.loader import get_template
 from django.views import View
-
+from django.http import JsonResponse
+from magine.networks.exporters import nx_to_json
 import gui.forms.network as forms
 from .common import check_species_list
-from gui.network_functions import path_between, create_subgraph, neighbors
-
+from gui.network_functions import path_between, create_subgraph, neighbors,\
+    expand_neighbors
+import json
+import networkx as nx
 
 class SubgraphView(View):
     def get(self, request):
@@ -55,6 +58,13 @@ class NeighborsView(View):
         else:
             form = forms.NodeNeighborsForm(initial={'max_dist': '1'})
             return render(request, 'form_graph_neighbors.html', {'form': form})
+
+
+def neighbor_expand(request):
+    list_of_species = request.GET['list_of_species'].split(',')
+    names = check_species_list(list_of_species)
+    net = expand_neighbors(names, up=True, down=True, max_dist=1)
+    return JsonResponse(net)
 
 
 def network_stats(request):

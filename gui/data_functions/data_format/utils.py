@@ -1,6 +1,4 @@
 import re
-
-import numpy as np
 import pandas as pd
 
 from .standard_cols import *
@@ -29,15 +27,11 @@ def load_from_zip(filename):
     if 'gene' in data.dtypes:
         data['primary_genes'] = data['gene']
         data = check_data(data, 'primary_genes')
-        tmp_sort = np.sort(data['primary_genes'].unique())
-        print(list(tmp_sort[0:5]), list(tmp_sort[-5:]))
         return data
 
     if 'primary_genes' in data.dtypes:
         data['gene'] = data['primary_genes']
         data = check_data(data, 'primary_genes')
-        tmp_sort = np.sort(data['primary_genes'].unique())
-        print(list(tmp_sort[0:5]), list(tmp_sort[-5:]))
         return data
 
     else:
@@ -86,6 +80,7 @@ def convert_to_rankable_time(data):
     return data
 
 
+# function to correct genes converting to months (if touched by excel)
 _names = {}
 for i in range(16):
     _names['{0}-Sep'.format(i)] = 'SEPT{0}'.format(i)

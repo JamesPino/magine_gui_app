@@ -1,13 +1,14 @@
+import logging
+from gui.logging import get_logger
 from gui.data_functions.data_format.format import process_raptr_zip
 from gui.models import Data
 
+logger = get_logger(__file__, log_level=logging.INFO)
 
-def add_project_from_zip(proj_name, filename):
-    print('saving {}'.format(proj_name))
-    Data.objects.filter(project_name=proj_name).delete()
-    new = Data.objects.create(project_name=proj_name)
-    print(filename)
+
+def add_project_from_zip(filename):
+    logger.info("Processing RAPTR file")
     df = process_raptr_zip(filename)
-    new.set_exp_data(df, set_time_point=True)
-    new.save()
-    print('saved')
+    logger.info("Done")
+    return df
+
