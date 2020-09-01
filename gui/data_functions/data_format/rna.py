@@ -1,7 +1,7 @@
 import pandas as pd
 
-from .standard_cols import *
 from .utils import load_from_zip
+from .standard_cols import *
 
 
 def process_rna_seq(filename):

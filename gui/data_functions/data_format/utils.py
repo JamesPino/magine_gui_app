@@ -1,6 +1,7 @@
 import re
-import pandas as pd
 
+import numpy as np
+import pandas as pd
 from .standard_cols import *
 
 
@@ -46,15 +47,48 @@ def check_data(data, keyword):
     return data
 
 
+def convert_time_to_hours(d):
+    """ replaces string of time point with float
+
+    Parameters
+    ----------
+    d: pandas.Dataframe
+        pandas.Dataframe
+
+    Returns
+    -------
+
+    """
+    t = d['time_points']
+    if isinstance(t, float):
+        return t
+    if 's' in t:
+        time = float(t.replace('s', '')) / 3600.
+    elif 'min' in t:
+        time = float(t.replace('min', '')) / 60.
+    elif 'hr' in t:
+        t = t.replace('hr', '')
+        if 'h' in t:
+            t = t.replace('h', '')
+        time = float(t)
+    elif 'h' in t:
+        time = float(t.replace('h', ''))
+    else:
+        print('no time')
+        return None
+    return time
+
+
 def convert_to_rankable_time(data):
     def h_to_hr(row):
-        if row[sample_id].endswith('h') or row[sample_id].endswith('hr'):
-            number = re.findall('\d+', row[sample_id])
-            if len(set(number)) == 1:
-                return number[0] + 'hr'
-            else:
-                return row[sample_id].replace('h', 'hr')
-            # return number.replace('h', 'hr')
+        if row[sample_id].endswith('h'):
+            return row[sample_id].replace('h', 'hr')
+        else:
+            return row[sample_id]
+
+    def m_to_min(row):
+        if row[sample_id].endswith('m'):
+            return row[sample_id].replace('m', 'min')
         else:
             return row[sample_id]
 
@@ -73,14 +107,13 @@ def convert_to_rankable_time(data):
 
         out = out.format(int(number), nondigits)
         return out
-
     data[sample_id] = data.apply(h_to_hr, axis=1)
+    data[sample_id] = data.apply(m_to_min, axis=1)
     data[sample_id] = data.apply(pad_string, axis=1)
 
     return data
 
 
-# function to correct genes converting to months (if touched by excel)
 _names = {}
 for i in range(16):
     _names['{0}-Sep'.format(i)] = 'SEPT{0}'.format(i)

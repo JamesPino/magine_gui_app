@@ -1,14 +1,16 @@
-FROM python:3.6
-
+FROM lolab/magine-complete
+USER root
 ENV PYTHONDONTWRITEBYTECODE 1
 ENV PYTHONUNBUFFERED 1
 
-ENV MAGINE_HOME=/magine_home
-
-RUN mkdir $MAGINE_HOME
-WORKDIR $MAGINE_HOME
-RUN git clone https://github.com/LoLab-VU/MAGINE Magine
+ENV MAGINE_HOME=/home/magine
 ADD . $MAGINE_HOME
-RUN pip install -r requirements-production.txt
-RUN python Magine/copy_sample_data.py
-ENV PYTHONPATH /magine_home/Magine:$PYTHONPATH
+WORKDIR $MAGINE_HOME
+ENV PYTHONPATH $MAGINE_HOME:$PYTHONPATH
+RUN conda uninstall networkx && conda install networkx=2.3
+RUN conda install django=2.2  psycopg2
+RUN conda install -c conda-forge uwsgi celery=4.2.1
+RUN pip install django-picklefield django-import-export redis
+ENTRYPOINT []
+#ENTRYPOINT ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+USER magine

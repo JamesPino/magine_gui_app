@@ -63,7 +63,7 @@
 
 <script>
     {% autoescape off %}
-    var json_data = {{ data.data|safe}};
+    let json_data = {{ data.data|safe}};
     {% endautoescape %}
     $(document).ready(function () {
 
@@ -71,11 +71,11 @@
             e.preventDefault();
             $(this).toggleClass("clicked");
             // Get the column API object
-            var column = tbl.column($(this).attr('data-column'));
+            let column = tbl.column($(this).attr('data-column'));
             // Toggle the visibility
             column.visible(!column.visible());
         });
-        var tbl = $('table').DataTable({
+        let tbl = $('table').DataTable({
             "data": json_data,
             "autoWidth": false,
 
@@ -106,7 +106,7 @@
 
 
     function getSelected() {
-        var selected = [];
+        let selected = [];
         $('#table input:checked').each(function () {
             selected.push($(this).attr('name'));
         });

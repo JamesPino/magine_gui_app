@@ -13,6 +13,6 @@ app.config_from_object('django.conf:settings')
 app.autodiscover_tasks(lambda: settings.INSTALLED_APPS)
 app.control.broadcast(
     'rate_limit',
-    arguments={'task_name': 'gui.enrichment_functions.tasks.run_set_of_dbs',
+    arguments={'task_name': 'gui.tasks.run_set_of_dbs',
                'rate_limit': '1/m'}
 )

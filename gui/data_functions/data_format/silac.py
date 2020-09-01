@@ -1,11 +1,12 @@
 import re
 
-from .standard_cols import *
 from .utils import load_from_zip
+from .standard_cols import *
 
 
 def process_silac(filename):
     data = load_from_zip(filename)
+
 
     # data = data[data['n_significant'] == 2]
 
@@ -84,3 +85,4 @@ def process_phsilac(filename):
     data.loc[:, sample_id] = data['time_points']
 
     return data
+

@@ -98,7 +98,7 @@ WSGI_APPLICATION = 'magine_gui_app.wsgi.application'
 
 
 DATABASE_SETTING = 'postgres'
-DATABASE_SETTING = ''
+# DATABASE_SETTING = ''
 
 if DATABASE_SETTING == 'postgres':
     # Bigger batch size is faster but uses more memory

@@ -88,7 +88,7 @@ def _get_edge_types(graph):
 
 def prep_g(sg):
     for i in sg.nodes:
-        sg.node[i]['color'] = 'white'
+        sg.nodes[i]['color'] = 'white'
     data = nx_to_json(sg)
     data['edge_list'] = _get_edge_types(sg)
     data['style_json'] = styles['default']

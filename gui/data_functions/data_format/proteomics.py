@@ -1,7 +1,9 @@
 import re
+import numpy as np
+import pandas as pd
 
-from .standard_cols import *
 from .utils import load_from_zip
+from .standard_cols import *
 
 
 def process_label_free(filename):
@@ -29,7 +31,7 @@ def process_subcell_label_free(filename):
     label_free[exp_method] = 'label_free_translocation'
 
     label_free[identifier] = label_free['primary_genes']
-    label_free.dropna(subset=identifier, inplace=True)
+    label_free.dropna(subset=[identifier], inplace=True)
 
     label_free[label] = label_free.apply(find_mod, axis=1)
     label_free[label] = label_free[label] + '_' + \

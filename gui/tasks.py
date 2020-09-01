@@ -6,17 +6,40 @@ from gui.models import EnrichmentOutput
 from magine.logging import get_logger
 
 logger = get_logger(__name__, log_level=logging.INFO)
-# from magine_gui_app.celery import app
-# from celery.utils.log import get_task_logger
+logger.setLevel(logging.INFO)
+USE_CELERY = False
+TESTING = True
 
-# logger = get_task_logger(__name__)
+if USE_CELERY:
+    from magine_gui_app.celery import app
+
+    @app.task(name='gui.tasks.run_set_of_dbs')
+    def run_set_of_dbs(sample, sample_id, dbs, label, p_name):
+        logger.info("Running enrichment")
+        e = Enrichr()
+        df = e.run(sample, dbs)
+        if df.shape[0] == 0:
+            print("No results found")
+            return
+        df = _check_nan_add_sig(df)
+        df['sample_id'] = sample_id
+        df['category'] = label
+        df['project_name'] = p_name
+
+        EnrichmentOutput.objects.bulk_create(
+            [EnrichmentOutput(**r) for r in df.to_dict(orient='records')]
+        )
+        logger.info("Done with enrichment for {} : {}".format(sample_id, dbs))
 
 
 def run(samples, sample_ids, label, p_name, already_there):
     standard_dbs = []
-    dbs = ['drug', 'disease', 'ontologies', 'pathways', 'transcription',
-           'kinases', 'histone', 'cell_type']
-    dbs = ['drug']
+    if TESTING:
+        dbs = ['drug']
+    else:
+        dbs = ['drug', 'disease', 'ontologies', 'pathways', 'transcription',
+               'kinases', 'histone', 'cell_type']
+
     for i in dbs:
         standard_dbs += db_types[i]
 
@@ -26,37 +49,11 @@ def run(samples, sample_ids, label, p_name, already_there):
         current = "{}_{}_{}".format(label, sample_id, p_name)
         print(standard_dbs)
         if current not in already_there:
-            # run_set_of_dbs.apply_async(
-            #     args=(list(genes), sample_id, standard_dbs, label, p_name),
-            #     countdown=30
-            # )
-            run_set_of_dbs(
-               list(genes), sample_id, standard_dbs, label, p_name
+            run_set_of_dbs.apply_async(
+                args=(list(genes), sample_id, standard_dbs, label, p_name),
+                countdown=30
             )
-
         print("Finished {}".format(sample_id))
-
-
-# @app.task(name='gui.enrichment_functions.tasks.run_set_of_dbs')
-def run_set_of_dbs(sample, sample_id, dbs, label, p_name):
-    # logger.info("Running enrichment")
-    e = Enrichr()
-    df = e.run(sample, dbs)
-    if df.shape[0] == 0:
-        print("No results found")
-        return
-    df['significant'] = False
-    crit = (df['adj_p_value'] <= 0.05) & (df['combined_score'] > 0)
-    df.loc[crit, 'significant'] = True
-
-    df['sample_id'] = sample_id
-    df['category'] = label
-    df['project_name'] = p_name
-
-    EnrichmentOutput.objects.bulk_create(
-        [EnrichmentOutput(**r) for r in df.to_dict(orient='records')]
-    )
-    # logger.info("Done with enrichment for {} : {}".format(sample_id, dbs))
 
 
 def run_enrichment_for_project(exp_data, project_name, output_path=None):
@@ -64,12 +61,14 @@ def run_enrichment_for_project(exp_data, project_name, output_path=None):
 
     Parameters
     ----------
-    exp_data : magine.data.experimental_data.ExprerimentalData
+    exp_data : magine.data.ExperimentalData
     project_name : str
     output_path : str
         Location to save all individual enrichment output files created.
 
     """
+    logger.info("Running enrichment for project".format(project_name))
+
     already_there = set()
     for i in EnrichmentOutput.objects.filter(project_name=project_name):
         already_there.add("{}_{}_{}".format(str(i.category), str(i.sample_id),
@@ -112,62 +111,72 @@ def run_enrichment_for_project(exp_data, project_name, output_path=None):
             df['category'] = category
             all_df.append(df)
 
+    if USE_CELERY:
+        _run = run
+    else:
+        _run = _run_new
     #  run all protein labeled species grouped by time point
     #  ( label-free, ph-silac, etc are all combined)
     if len(exp_data.proteins.sample_ids) != 0:
         sample = exp_data.proteins.sig
-        _run_new(sample.by_sample, sample.sample_ids, 'proteomics_both')
-        _run_new(sample.up_by_sample, sample.sample_ids, 'proteomics_up')
-        _run_new(sample.down_by_sample, sample.sample_ids, 'proteomics_down')
+        if TESTING:
+            _run(sample.by_sample, sample.sample_ids, 'proteomics_both')
+        else:
+            _run(sample.by_sample, sample.sample_ids, 'proteomics_both')
+            _run(sample.up_by_sample, sample.sample_ids, 'proteomics_up')
+            _run(sample.down_by_sample, sample.sample_ids, 'proteomics_down')
+    if not TESTING:
+        #  run all RNA labeled species grouped by time point
+        if len(exp_data.rna.sample_ids) != 0:
+            sample = exp_data.rna.sig
+            _run(sample.by_sample, sample.sample_ids, 'rna_both')
+            _run(sample.down_by_sample, sample.sample_ids, 'rna_down')
+            _run(sample.up_by_sample, sample.sample_ids, 'rna_up')
 
-    # #  run all RNA labeled species grouped by time point
-    # if len(exp_data.rna.sample_ids) != 0:
-    #     sample = exp_data.rna.sig
-    #     _run_new(sample.by_sample, sample.sample_ids, 'rna_both')
-    #     _run_new(sample.down_by_sample, sample.sample_ids, 'rna_down')
-    #     _run_new(sample.up_by_sample, sample.sample_ids, 'rna_up')
-    #
-    # #  run each experimental 'source' by time point
-    # #  ( label-free, ph-silac, etc are all separate)
-    # for source in exp_data.exp_methods:
-    #     df = exp_data[source].sig
-    #     col_options = df['species_type'].unique()
-    #     # make sure there is only a single species type and it is protein
-    #     # this makes sure that the RNA seq doesnt get ran twice
-    #     if len(col_options) != 1:
-    #         continue
-    #     if col_options[0] == 'protein':
-    #         _run_new(df.by_sample, df.sample_ids, '{}_both'.format(source))
-    #         _run_new(df.up_by_sample, df.sample_ids, '{}_up'.format(source))
-    #         _run_new(df.down_by_sample, df.sample_ids,
-    #                  '{}_down'.format(source))
+        #  run each experimental 'source' by time point
+        #  ( label-free, ph-silac, etc are all separate)
+        for source in exp_data.exp_methods:
+            df = exp_data[source].sig
+            col_options = df['species_type'].unique()
+            # make sure there is only a single species type and it is protein
+            # this makes sure that the RNA seq doesnt get ran twice
+            if len(col_options) != 1:
+                continue
+            ids = df.sample_ids
+            if col_options[0] == 'protein':
+                _run(df.by_sample, ids, '{}_both'.format(source))
+                _run(df.up_by_sample, ids, '{}_up'.format(source))
+                _run(df.down_by_sample, ids, '{}_down'.format(source))
 
-    # merge all outputs
-    final_df = pd.concat(all_df, ignore_index=True)
-    print(final_df.columns)
-    final_df = final_df[
-        ['term_name', 'rank', 'combined_score', 'adj_p_value', 'p_value',
-         'genes', 'z_score', 'n_genes', 'sample_id', 'category', 'db']
-    ]
+    if not USE_CELERY:
+        # merge all outputs
+        final_df = pd.concat(all_df, ignore_index=True)
+        final_df = final_df[
+            ['term_name', 'rank', 'combined_score', 'adj_p_value', 'p_value',
+             'genes', 'z_score', 'n_genes', 'sample_id', 'category', 'db']
+        ]
 
+        final_df = _check_nan_add_sig(final_df)
+        final_df['project_name'] = project_name
+        EnrichmentOutput.objects.bulk_create(
+            [EnrichmentOutput(**r) for r in final_df.to_dict(orient='records')]
+        )
+        logger.info("Saving output: {}_enrichment.csv.gz".format(project_name))
+        final_df.to_csv('{}_enrichment.csv.gz'.format(project_name),
+                        encoding='utf-8', compression='gzip', index=False)
+
+
+def _check_nan_add_sig(df):
     # remove rows without a term name
-    final_df = final_df[~final_df['term_name'].isnull()].copy()
-    final_df = final_df[~final_df['adj_p_value'].isnull()].copy()
-    final_df = final_df[~final_df['combined_score'].isnull()].copy()
-    print(final_df.shape)
-    print(final_df[~final_df.isnull()].shape)
-    final_df = final_df[~final_df.isnull()].copy()
-    print(final_df['adj_p_value'].dtype)
-    print(final_df['combined_score'].dtype)
-    final_df['significant'] = False
+    df = df[~df['term_name'].isnull()].copy()
+    df = df[~df['term_name'] == ''].copy()
+    df = df[~df['adj_p_value'].isnull()].copy()
+    df = df[~df['combined_score'].isnull()].copy()
+    df = df[~df.isnull()].copy()
+    df['combined_score'] = df['combined_score'].astype(float)
+    df['significant'] = False
     # Adds significant column
-    final_df.loc[(final_df['adj_p_value'] <= 0.05) &
-                 (final_df['combined_score'] > 0.0), 'significant'] = True
-    final_df['project_name'] = project_name
-    final_df = final_df[final_df['adj_p_value'] < 0.2]
-    EnrichmentOutput.objects.bulk_create(
-        [EnrichmentOutput(**r) for r in final_df.to_dict(orient='records')]
-    )
-    logger.info("Saving output: {}_enrichment.csv.gz".format(project_name))
-    final_df.to_csv('{}_enrichment.csv.gz'.format(project_name),
-                    encoding='utf-8', compression='gzip', index=False)
+    df.loc[(df['adj_p_value'] <= 0.05) &
+           (df['combined_score'] > 0.0), 'significant'] = True
+    df = df[df['adj_p_value'] < 0.2]
+    return df

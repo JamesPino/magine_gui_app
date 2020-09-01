@@ -17,10 +17,13 @@ services:
       interval: 30s
       timeout: 30s
       retries: 6
-
+  redis:
+    image: redis:3.2.11
   magine:
     restart: always
     build: .
+    volumes:
+      - ./_state:/home/magine/_state
     environment:
     - POSTGRES_USER=postgres
     - POSTGRES_PASSWORD=postgres
@@ -28,23 +31,22 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-    - db
-    - redis
+      - redis
+      - db
+
 
   celery:
-    image: magine
+    build: .
     volumes:
-    - '/magine_home'
+    - '/home/magine'
     command: celery -A magine_gui_app worker --loglevel=info
     environment:
     - CELERY_BROKER=redis://redis:6379/0
     - CELERY_BACKEND=redis://redis:6379/0
     depends_on:
-    - web
     - redis
+    - magine
 
-  redis:
-    image: redis:3.2.11
 
 volumes:
   postgres_data:
