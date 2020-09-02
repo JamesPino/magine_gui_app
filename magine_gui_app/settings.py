@@ -27,12 +27,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['magine.lolab.xyz', '127.0.0.1', '0.0.0.0']
 
-# CELERY STUFF
-BROKER_URL = 'redis://localhost:6379'
-CELERY_RESULT_BACKEND = 'redis://localhost:6379'
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
 # Application definition
 
 INSTALLED_APPS = [
@@ -162,3 +156,30 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+
+
+
+# # CELERY STUFF
+BROKER_URL = os.environ.get('CELERY_BROKER')
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND')
+
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+
+from kombu import Queue, Exchange
+CELERY_TASK_DEFAULT_PRIORITY = 5
+CELERY_TASK_QUEUE_MAX_PRIORITY = 10
+CELERY_TASK_QUEUES = (
+    Queue('celery', Exchange('celery'),
+          routing_key='celery',
+          queue_arguments={'x-max-priority': CELERY_TASK_QUEUE_MAX_PRIORITY}),
+)
+# Time limit before tasks are aborted (24 hours)
+CELERY_TASK_SOFT_TIME_LIMIT = 60 * 60 * 24
+# Datasets with more tasks than this are run at priority=3
+CELERY_DEPRIORITISE_SIZE_L3 = 1000
+# Datasets with more tasks than this are run at priority=2
+CELERY_DEPRIORITISE_SIZE_L2 = 10000

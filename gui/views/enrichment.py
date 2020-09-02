@@ -8,6 +8,7 @@ import gui.enrichr_helper as enrichr_help
 
 from gui.views.common import check_species_list
 from gui.models import EnrichmentOutput
+from gui.enrichr_helper import add_enrichment
 
 
 class EnrichmentResultsView(View):
@@ -46,6 +47,7 @@ class ProjectEnrichmentView(View):
 
 
 def project_enrichment(request, project_name):
+    # add_enrichment(project_name, reset_data=True)
     ex = EnrichmentOutput.objects.filter(project_name=project_name).values()
     data = enrichr_help.model_to_json(ex)
     return render(request, 'simple_table_view.html', data)

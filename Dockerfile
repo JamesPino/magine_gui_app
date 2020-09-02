@@ -9,7 +9,7 @@ WORKDIR $MAGINE_HOME
 ENV PYTHONPATH $MAGINE_HOME:$PYTHONPATH
 RUN conda uninstall networkx && conda install networkx=2.3
 RUN conda install django=2.2  psycopg2
-RUN conda install -c conda-forge uwsgi celery=4.2.1
+RUN conda install -c conda-forge uwsgi celery=4.4
 RUN pip install django-picklefield django-import-export redis
 ENTRYPOINT []
 #ENTRYPOINT ["python", "manage.py", "runserver", "0.0.0.0:8000"]

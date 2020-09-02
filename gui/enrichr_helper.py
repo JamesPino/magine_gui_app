@@ -29,7 +29,7 @@ def model_to_json(model):
         del df['id']
     if 'project_name' in df.columns:
         del df['project_name']
-    df.remove_duplicates(inplace=True)
+    df.drop_duplicates(inplace=True)
     return _format_table_for_view(df, cols)
 
 

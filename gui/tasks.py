@@ -7,32 +7,32 @@ from magine.logging import get_logger
 
 logger = get_logger(__name__, log_level=logging.INFO)
 logger.setLevel(logging.INFO)
-USE_CELERY = False
-TESTING = True
+USE_CELERY = True
+TESTING = False
 
-if USE_CELERY:
-    from magine_gui_app.celery import app
-
-    @app.task(name='gui.tasks.run_set_of_dbs')
-    def run_set_of_dbs(sample, sample_id, dbs, label, p_name):
-        logger.info("Running enrichment")
-        e = Enrichr()
-        df = e.run(sample, dbs)
-        if df.shape[0] == 0:
-            print("No results found")
-            return
-        df = _check_nan_add_sig(df)
-        df['sample_id'] = sample_id
-        df['category'] = label
-        df['project_name'] = p_name
-
-        EnrichmentOutput.objects.bulk_create(
-            [EnrichmentOutput(**r) for r in df.to_dict(orient='records')]
-        )
-        logger.info("Done with enrichment for {} : {}".format(sample_id, dbs))
+from magine_gui_app.celery import app
 
 
-def run(samples, sample_ids, label, p_name, already_there):
+@app.task(name='gui.tasks.run_set_of_dbs')
+def run_set_of_dbs(sample, sample_id, dbs, label, p_name):
+    logger.info("Running enrichment")
+    e = Enrichr()
+    df = e.run(sample, dbs)
+    if df.shape[0] == 0:
+        print("No results found")
+        return
+    df = _check_nan_add_sig(df)
+    df['sample_id'] = sample_id
+    df['category'] = label
+    df['project_name'] = p_name
+
+    EnrichmentOutput.objects.bulk_create(
+        [EnrichmentOutput(**r) for r in df.to_dict(orient='records')]
+    )
+    logger.info("Done with enrichment for {} : {}".format(sample_id, dbs))
+
+
+def run(samples, sample_ids, label, p_name):
     standard_dbs = []
     if TESTING:
         dbs = ['drug']
@@ -45,14 +45,10 @@ def run(samples, sample_ids, label, p_name, already_there):
 
     for genes, sample_id in zip(samples, sample_ids):
         print("Starting {}".format(sample_id))
-
-        current = "{}_{}_{}".format(label, sample_id, p_name)
-        print(standard_dbs)
-        if current not in already_there:
-            run_set_of_dbs.apply_async(
-                args=(list(genes), sample_id, standard_dbs, label, p_name),
-                countdown=30
-            )
+        run_set_of_dbs.apply_async(
+            args=(list(genes), sample_id, standard_dbs, label, p_name),
+            countdown=30
+        )
         print("Finished {}".format(sample_id))
 
 
@@ -68,14 +64,12 @@ def run_enrichment_for_project(exp_data, project_name, output_path=None):
 
     """
     logger.info("Running enrichment for project".format(project_name))
-
+    print("Running enrichment for project".format(project_name))
     already_there = set()
     for i in EnrichmentOutput.objects.filter(project_name=project_name):
         already_there.add("{}_{}_{}".format(str(i.category), str(i.sample_id),
                                             project_name))
     databases = standard_dbs
-
-    logger.info("Running enrichment on project")
     logger.info("Running {} databases".format(len(databases)))
 
     e = Enrichr(verbose=True)
@@ -89,7 +83,7 @@ def run_enrichment_for_project(exp_data, project_name, output_path=None):
         logger.info("Creating output directory: {}".format(_dir))
         os.mkdir(_dir)
 
-    def _run_new(samples, timepoints, category):
+    def _run_new(samples, timepoints, category, p_name):
         logger.info("Running {}".format(category))
         for genes, sample_id in zip(samples, timepoints):
             if not len(genes):
@@ -119,19 +113,22 @@ def run_enrichment_for_project(exp_data, project_name, output_path=None):
     #  ( label-free, ph-silac, etc are all combined)
     if len(exp_data.proteins.sample_ids) != 0:
         sample = exp_data.proteins.sig
+        ids = sample.sample_ids
         if TESTING:
-            _run(sample.by_sample, sample.sample_ids, 'proteomics_both')
+            _run(sample.by_sample, ids, 'proteomics_both', project_name)
         else:
-            _run(sample.by_sample, sample.sample_ids, 'proteomics_both')
-            _run(sample.up_by_sample, sample.sample_ids, 'proteomics_up')
-            _run(sample.down_by_sample, sample.sample_ids, 'proteomics_down')
+            _run(sample.by_sample, ids, 'proteomics_both', project_name)
+            _run(sample.up_by_sample, ids, 'proteomics_up', project_name)
+            _run(sample.down_by_sample, ids, 'proteomics_down', project_name)
+
     if not TESTING:
         #  run all RNA labeled species grouped by time point
         if len(exp_data.rna.sample_ids) != 0:
             sample = exp_data.rna.sig
-            _run(sample.by_sample, sample.sample_ids, 'rna_both')
-            _run(sample.down_by_sample, sample.sample_ids, 'rna_down')
-            _run(sample.up_by_sample, sample.sample_ids, 'rna_up')
+            ids = sample.sample_ids
+            _run(sample.by_sample, ids, 'rna_both', project_name)
+            _run(sample.down_by_sample, ids, 'rna_down', project_name)
+            _run(sample.up_by_sample, ids, 'rna_up', project_name)
 
         #  run each experimental 'source' by time point
         #  ( label-free, ph-silac, etc are all separate)
@@ -144,9 +141,10 @@ def run_enrichment_for_project(exp_data, project_name, output_path=None):
                 continue
             ids = df.sample_ids
             if col_options[0] == 'protein':
-                _run(df.by_sample, ids, '{}_both'.format(source))
-                _run(df.up_by_sample, ids, '{}_up'.format(source))
-                _run(df.down_by_sample, ids, '{}_down'.format(source))
+                _run(df.by_sample, ids, '{}_both'.format(source), project_name)
+                _run(df.up_by_sample, ids, '{}_up'.format(source), project_name)
+                _run(df.down_by_sample, ids, '{}_down'.format(source),
+                     project_name)
 
     if not USE_CELERY:
         # merge all outputs
@@ -169,7 +167,7 @@ def run_enrichment_for_project(exp_data, project_name, output_path=None):
 def _check_nan_add_sig(df):
     # remove rows without a term name
     df = df[~df['term_name'].isnull()].copy()
-    df = df[~df['term_name'] == ''].copy()
+    # df = df[~df['term_name'] == ''].copy()
     df = df[~df['adj_p_value'].isnull()].copy()
     df = df[~df['combined_score'].isnull()].copy()
     df = df[~df.isnull()].copy()

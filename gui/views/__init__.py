@@ -14,6 +14,7 @@ from gui.enrichr_helper import add_enrichment
 from gui.models import Data
 
 logger = get_logger(__file__, log_level=logging.INFO)
+logger.setLevel(logging.DEBUG)
 
 
 def index(request):
@@ -60,7 +61,7 @@ class NewProjectView(View):
                 new.save()
                 logger.info("Add project to database")
 
-            add_enrichment(proj_name, False)
+            add_enrichment(proj_name, True)
             return project_details(request, proj_name)
         form = ProjectForm()
         return render(request, 'add_data.html', {'form': form})
