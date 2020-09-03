@@ -14,3 +14,5 @@ RUN pip install django-picklefield django-import-export redis
 ENTRYPOINT []
 #ENTRYPOINT ["python", "manage.py", "runserver", "0.0.0.0:8000"]
 USER magine
+CMD ["uwsgi"]
+#CMD ["uwsgi", "--master", "--socket", ":8011", "--module", "magine_gui_app.wsgi", "--uid", "www-data", "--gid", "www-data", "--enable-threads"]

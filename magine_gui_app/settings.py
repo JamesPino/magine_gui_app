@@ -25,7 +25,7 @@ SECRET_KEY = '4am#0a-x##pt+_*%%8tp+f&hqf@a7on=%0o$zuq1(wo=-i-@(^'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['magine.lolab.xyz', '127.0.0.1', '0.0.0.0']
+ALLOWED_HOSTS = ["magine2.lolab.xyz", '127.0.0.1', '0.0.0.0']
 
 # Application definition
 
